@@ -7,29 +7,107 @@
     <!-- 引入 Coze Web SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@coze/web-sdk@latest/dist/index.js"></script>
     <style>
-        /* 极简样式，仅保证智能体充满页面 */
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
         #coze-web-sdk { width: 100%; height: 100vh; border: none; }
+        /* 新增：状态提示的样式 */
+        #status-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        #status-message.error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px;
+        }
+        .loader {
+            margin: 20px auto;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <!-- 这个div就是你的Coze智能体容器 -->
-    <div id="coze-web-sdk"></div>
+    <!-- 增加一个状态显示区域 -->
+    <div id="status-message">
+        <div class="loader"></div>
+        <p>正在加载 Coze 新闻助手，请稍候...</p>
+    </div>
+    <!-- Coze智能体容器，初始隐藏 -->
+    <div id="coze-web-sdk" style="display: none;"></div>
 
     <script>
-        // 🔧 【唯一需要修改的地方】替换成你的Bot ID
+        // 🔧 你的 Bot ID
         const botId = '7595139747782737947';
+        const statusEl = document.getElementById('status-message');
+        const containerEl = document.getElementById('coze-web-sdk');
 
-        // 自动初始化并渲染你的Coze智能体
-        window.addEventListener('DOMContentLoaded', () => {
-            if (botId && botId !== 'YOUR_BOT_ID_HERE') {
+        // 增加超时设置（例如20秒）
+        const initTimeout = 20000;
+        let timeoutHandle;
+
+        function showError(message) {
+            statusEl.innerHTML = `<div class="error"><strong>加载失败</strong><p>${message}</p><p>请检查控制台获取详细信息，或稍后重试。</p></div>`;
+            statusEl.className = 'error';
+        }
+
+        function initCozeBot() {
+            // 情况1：SDK对象未加载成功
+            if (typeof cozeWebSDK === 'undefined') {
+                showError('Coze Web SDK 加载失败。请检查网络连接，或稍后重试。');
+                return;
+            }
+
+            // 情况2：Bot ID 未配置
+            if (!botId || botId === 'YOUR_BOT_ID_HERE') {
+                showError('请在代码中配置正确的 Coze Bot ID。');
+                return;
+            }
+
+            // 尝试初始化
+            try {
                 cozeWebSDK.init({
                     botId: botId,
-                    container: document.querySelector('#coze-web-sdk'),
+                    container: containerEl,
+                    // 可选：根据需要添加其他初始化参数，例如区域
+                    // region: 'your-region' 
+                }).then(() => {
+                    // 初始化成功，显示应用界面
+                    clearTimeout(timeoutHandle);
+                    statusEl.style.display = 'none';
+                    containerEl.style.display = 'block';
+                    console.log('Coze 智能体初始化成功！');
+                }).catch(error => {
+                    // 初始化过程本身出错
+                    console.error('Coze 初始化过程出错:', error);
+                    showError(`智能体初始化失败: ${error.message || '未知错误'}`);
                 });
-            } else {
-                document.body.innerHTML = '<h3 style="color:red; text-align:center; margin-top:50px;">请在代码中配置正确的 Coze Bot ID。</h3>';
+            } catch (error) {
+                // 初始化调用出错（如同步错误）
+                console.error('初始化调用异常:', error);
+                showError(`启动异常: ${error.message}`);
             }
+        }
+
+        // 页面加载完成后开始初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            // 设置超时，防止无限等待
+            timeoutHandle = setTimeout(() => {
+                showError('加载超时，可能是网络问题或SDK加载缓慢。请刷新页面重试。');
+            }, initTimeout);
+            
+            // 等待一小段时间确保SDK脚本有足够时间加载，然后初始化
+            setTimeout(initCozeBot, 500);
         });
     </script>
 </body>
