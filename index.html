@@ -4,23 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的新闻助手</title>
-    <!-- 引入 Coze Web SDK -->
-    <script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/builder-web-sdk/0.1.1-beta.1/dist/umd/index.js"></script>
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
-        #coze-web-sdk { width: 100%; height: 100vh; border: none; }
-        /* 新增：状态提示的样式 */
-        #status-message {
+        #app { width: 100%; height: 100vh; } /* 容器名称必须与官方代码一致 */
+        #status {
             text-align: center;
             padding: 40px 20px;
             color: #666;
-        }
-        #status-message.error {
-            color: #dc3545;
-            background-color: #f8d7da;
-            padding: 20px;
-            border-radius: 5px;
-            margin: 20px;
         }
         .loader {
             margin: 20px auto;
@@ -35,81 +25,76 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .error { color: #dc3545; background-color: #f8d7da; padding: 20px; border-radius: 5px; margin: 20px; }
     </style>
 </head>
 <body>
-    <!-- 增加一个状态显示区域 -->
-    <div id="status-message">
+    <!-- 加载状态提示 -->
+    <div id="status">
         <div class="loader"></div>
-        <p>正在加载 Coze 新闻助手，请稍候...</p>
+        <p>正在加载新闻助手...</p>
     </div>
-    <!-- Coze智能体容器，初始隐藏 -->
-    <div id="coze-web-sdk" style="display: none;"></div>
+    <!-- 应用容器，名称必须为 #app -->
+    <div id="app"></div>
 
     <script>
-        // 🔧 你的 Bot ID
-        const botId = '7595139747782737947';
-        const statusEl = document.getElementById('status-message');
-        const containerEl = document.getElementById('coze-web-sdk');
-
-        // 增加超时设置（例如20秒）
-        const initTimeout = 20000;
-        let timeoutHandle;
-
-        function showError(message) {
-            statusEl.innerHTML = `<div class="error"><strong>加载失败</strong><p>${message}</p><p>请检查控制台获取详细信息，或稍后重试。</p></div>`;
-            statusEl.className = 'error';
-        }
-
-        function initCozeBot() {
-            // 情况1：SDK对象未加载成功
-            if (typeof cozeWebSDK === 'undefined') {
-                showError('Coze Web SDK 加载失败。请检查网络连接，或稍后重试。');
-                return;
+        // 🔧 【核心配置区】必须完全按照你从Coze后台获取的代码填写
+        const config = {
+            token: 'sat_a8UX1YINH9dJ0fk1KY3y4mV48gVvxUDPMX6P87MAIU9UEgYXN7VzwurZcaeX8zYH', // ⚠️ 请替换成你从Coze后台获得的完整 token（以 pat_ 开头的长字符串）
+            appId: '7595139747782737947', // 你的 App ID / Bot ID
+            container: '#app',
+            userInfo: {
+                id: '',
+                url: '',
+                nickname: '用户' // 可以自定义默认用户名
             }
+        };
 
-            // 情况2：Bot ID 未配置
-            if (!botId || botId === 'YOUR_BOT_ID_HERE') {
-                showError('请在代码中配置正确的 Coze Bot ID。');
-                return;
-            }
+        // 动态加载官方指定的SDK
+        var webSdkScript = document.createElement('script');
+        webSdkScript.src = 'https://lf-cdn.coze.cn/obj/unpkg/flow-platform/builder-web-sdk/0.1.1-beta.1/dist/umd/index.js';
+        
+        // 设置加载超时（30秒）
+        const loadTimeout = 30000;
+        const timeoutId = setTimeout(() => {
+            document.getElementById('status').innerHTML = '<div class="error">加载超时，请检查网络或刷新页面。</div>';
+        }, loadTimeout);
 
-            // 尝试初始化
-            try {
-                cozeWebSDK.init({
-                    botId: botId,
-                    container: containerEl,
-                    // 可选：根据需要添加其他初始化参数，例如区域
-                    // region: 'your-region' 
-                }).then(() => {
-                    // 初始化成功，显示应用界面
-                    clearTimeout(timeoutHandle);
-                    statusEl.style.display = 'none';
-                    containerEl.style.display = 'block';
-                    console.log('Coze 智能体初始化成功！');
-                }).catch(error => {
-                    // 初始化过程本身出错
-                    console.error('Coze 初始化过程出错:', error);
-                    showError(`智能体初始化失败: ${error.message || '未知错误'}`);
-                });
-            } catch (error) {
-                // 初始化调用出错（如同步错误）
-                console.error('初始化调用异常:', error);
-                showError(`启动异常: ${error.message}`);
-            }
-        }
-
-        // 页面加载完成后开始初始化
-        window.addEventListener('DOMContentLoaded', () => {
-            // 设置超时，防止无限等待
-            timeoutHandle = setTimeout(() => {
-                showError('加载超时，可能是网络问题或SDK加载缓慢。请刷新页面重试。');
-            }, initTimeout);
+        // SDK加载成功后的回调
+        webSdkScript.onload = function () {
+            clearTimeout(timeoutId); // 清除超时计时器
             
-            // 等待一小段时间确保SDK脚本有足够时间加载，然后初始化
-            setTimeout(initCozeBot, 500);
-        });
+            // 检查必要的配置
+            if (!config.token || config.token.includes('*')) {
+                document.getElementById('status').innerHTML = '<div class="error">请先在代码中填写正确的 token。</div>';
+                console.error('Token 未配置或仍为占位符。');
+                return;
+            }
+            if (typeof CozeWebSDK === 'undefined') {
+                document.getElementById('status').innerHTML = '<div class="error">SDK 加载异常。</div>';
+                return;
+            }
+
+            try {
+                // 🎯 关键步骤：使用官方正确的 API 初始化应用
+                new CozeWebSDK.AppWebSDK(config);
+                // 初始化调用成功，隐藏加载状态（应用界面会自行填充 #app 容器）
+                document.getElementById('status').style.display = 'none';
+                console.log('Coze 应用初始化调用成功。');
+            } catch (error) {
+                document.getElementById('status').innerHTML = `<div class="error">初始化失败：${error.message}</div>`;
+                console.error('初始化异常:', error);
+            }
+        };
+
+        // SDK加载失败的回调
+        webSdkScript.onerror = function () {
+            clearTimeout(timeoutId);
+            document.getElementById('status').innerHTML = '<div class="error">加载 SDK 失败，请检查网络或稍后重试。</div>';
+        };
+
+        // 开始加载SDK
+        document.head.appendChild(webSdkScript);
     </script>
 </body>
 </html>
-
