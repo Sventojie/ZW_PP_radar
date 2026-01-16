@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的新闻助手</title>
+    <!-- 引入 Coze Web SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@coze/web-sdk@latest/dist/index.js"></script>
+    <style>
+        /* 极简样式，仅保证智能体充满页面 */
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        #coze-web-sdk { width: 100%; height: 100vh; border: none; }
+    </style>
+</head>
+<body>
+    <!-- 这个div就是你的Coze智能体容器 -->
+    <div id="coze-web-sdk"></div>
+
+    <script>
+        // 🔧 【唯一需要修改的地方】替换成你的Bot ID
+        const botId = '7595139747782737947';
+
+        // 自动初始化并渲染你的Coze智能体
+        window.addEventListener('DOMContentLoaded', () => {
+            if (botId && botId !== 'YOUR_BOT_ID_HERE') {
+                cozeWebSDK.init({
+                    botId: botId,
+                    container: document.querySelector('#coze-web-sdk'),
+                });
+            } else {
+                document.body.innerHTML = '<h3 style="color:red; text-align:center; margin-top:50px;">请在代码中配置正确的 Coze Bot ID。</h3>';
+            }
+        });
+    </script>
+</body>
+</html>
